@@ -10,7 +10,7 @@
     {
       "kind": "REAL_EXTERNAL_CHANNEL_DELIVERY",
       "status": "BLOCKED_PENDING_OWNER_DESTINATION_AUTHORIZATION",
-      "reason": "No existing authorized Telegram/Discord integration or webhook secret was found."
+      "reason": "Telegram was selected by the owner; bot token and private chat ID are pending secure server-side configuration."
     }
   ],
   "completion": {
@@ -20,3 +20,4 @@
     "deduplication": "IMPLEMENTED_AND_UNIT_TESTED"
   }
 }
+

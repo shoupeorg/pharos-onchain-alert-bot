@@ -14,5 +14,6 @@ async function refresh(){
 }
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 $("configure").onclick=async()=>{try{await call("/api/owner/configure",{token:val("token"),minimumAmount:val("minimumAmount"),confirmationDelay:Number(val("confirmationDelay")),sender:val("sender"),recipient:val("recipient"),backfillFromBlock:val("backfillFromBlock")});show("Configuration saved and paused.","good");await refresh()}catch(e){show(e.message,"bad")}};
-for(const action of ["start","pause","resume","run"])$(action).onclick=async()=>{try{await call("/api/owner/"+action);show(action+" completed.","good");await refresh()}catch(e){show(e.message,"bad")}};
+for(const action of ["start","pause","resume","run","test-channel"])$(action).onclick=async()=>{try{await call("/api/owner/"+action);show(action+" completed.","good");await refresh()}catch(e){show(e.message,"bad")}};
 refresh();setInterval(refresh,15000);
+

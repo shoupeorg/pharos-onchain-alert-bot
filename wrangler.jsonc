@@ -14,8 +14,9 @@
   "d1_databases": [{
     "binding": "DB",
     "database_name": "pharos-onchain-alert-bot",
-    "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+    "database_id": "612678f4-8f44-4f05-be32-fa55b9b9970b",
     "migrations_dir": "migrations"
   }]
 }
+
 

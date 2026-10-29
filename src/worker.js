@@ -1,5 +1,6 @@
 import { CHAIN_ID, decodeTransfer, matches, makeAlert, nextRange, normalizeAddress, parseUnits } from "./core.js";
 import { RpcReader, readMetadata } from "./rpc.js";
+import { classifyTelegramResponse, telegramRequest } from "./telegram.js";
 
 const json = (data, status = 200) => new Response(JSON.stringify(data, null, 2), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 const now = () => new Date().toISOString();
@@ -12,7 +13,7 @@ async function row(env) { return env.DB.prepare("SELECT * FROM monitor WHERE id=
 function publicMonitor(m) {
   if (!m) return null;
   const c = JSON.parse(m.config_json);
-  return { state: m.state, config: { ...c, webhookConfigured: undefined }, cursorBlock: m.cursor_block, lastScheduledCheck: m.last_scheduled_at, lastSuccessfulCheck: m.last_success_at, processedRange: m.last_range_from == null ? null : [m.last_range_from, m.last_range_to], nextCheck: m.next_check_at, failure: m.last_error };
+  return { state: m.state, config: c, cursorBlock: m.cursor_block, lastScheduledCheck: m.last_scheduled_at, lastSuccessfulCheck: m.last_success_at, processedRange: m.last_range_from == null ? null : [m.last_range_from, m.last_range_to], nextCheck: m.next_check_at, failure: m.last_error };
 }
 async function listEvidence(env) {
   const result = await env.DB.prepare(`SELECT e.*,o.state delivery_state,o.message_id,o.response_status,o.last_error delivery_error,o.delivered_at
@@ -86,7 +87,7 @@ async function detect(env, trigger = "SCHEDULED") {
   }
 }
 async function deliverQueued(env) {
-  if (!env.DISCORD_WEBHOOK_URL) return { blocked: true, reason: "CHANNEL_SECRET_NOT_CONFIGURED" };
+  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return { blocked: true, reason: "CHANNEL_SECRET_NOT_CONFIGURED" };
   const candidates = await env.DB.prepare(`SELECT e.*,o.attempts FROM outbox o JOIN events e USING(event_key)
     WHERE o.state IN ('QUEUED','RETRYABLE_FAILURE') AND (o.next_attempt_at IS NULL OR o.next_attempt_at<=?) ORDER BY o.queued_at LIMIT 10`).bind(now()).all();
   for (const e of candidates.results || []) await deliverOne(env, e);
@@ -99,27 +100,52 @@ async function deliverOne(env, e) {
   const content=makeAlert(event,config,env.EXPLORER_TX_BASE);
   const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),10000);
   try {
-    const url=env.DISCORD_WEBHOOK_URL+(env.DISCORD_WEBHOOK_URL.includes("?")?"&":"?")+"wait=true";
-    const response=await fetch(url,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({content,allowed_mentions:{parse:[]}}),signal:controller.signal});
-    const text=await response.text();
-    if(response.ok){
-      let messageId=null; try{messageId=JSON.parse(text).id||null}catch{}
-      if(!messageId) throw new Error("Discord accepted the request without a message ID.");
-      await env.DB.prepare("UPDATE outbox SET state='DELIVERED',message_id=?,response_status=?,delivered_at=?,updated_at=?,last_error=NULL WHERE event_key=? AND state='DELIVERING'").bind(messageId,response.status,now(),now(),e.event_key).run();
-    } else if(response.status===429){
-      let retry=5; try{retry=Math.max(1,Math.min(300,Number(JSON.parse(text).retry_after)||5))}catch{}
-      await env.DB.prepare("UPDATE outbox SET state='RETRYABLE_FAILURE',response_status=429,next_attempt_at=?,last_error='Discord rate limited delivery.',updated_at=? WHERE event_key=? AND state='DELIVERING'").bind(new Date(Date.now()+retry*1000).toISOString(),now(),e.event_key).run();
-    } else if(response.status>=500){
-      await env.DB.prepare("UPDATE outbox SET state='RETRYABLE_FAILURE',response_status=?,next_attempt_at=?,last_error=?,updated_at=? WHERE event_key=? AND state='DELIVERING'").bind(response.status,new Date(Date.now()+60000).toISOString(),"Discord server rejected delivery.",now(),e.event_key).run();
+    const request=telegramRequest(env.TELEGRAM_BOT_TOKEN,env.TELEGRAM_CHAT_ID,content);
+    const response=await fetch(request.url,{...request.init,signal:controller.signal});
+    const text=await response.text(), outcome=classifyTelegramResponse(response.status,text);
+    if(outcome.kind==="DELIVERED"){
+      await env.DB.prepare("UPDATE outbox SET state='DELIVERED',message_id=?,response_status=?,delivered_at=?,updated_at=?,last_error=NULL WHERE event_key=? AND state='DELIVERING'").bind(outcome.messageId,response.status,now(),now(),e.event_key).run();
+    } else if(outcome.kind==="RATE_LIMIT"){
+      await env.DB.prepare("UPDATE outbox SET state='RETRYABLE_FAILURE',response_status=429,next_attempt_at=?,last_error=?,updated_at=? WHERE event_key=? AND state='DELIVERING'").bind(new Date(Date.now()+outcome.retryAfter*1000).toISOString(),outcome.error,now(),e.event_key).run();
+    } else if(outcome.kind==="RETRYABLE_FAILURE"){
+      await env.DB.prepare("UPDATE outbox SET state='RETRYABLE_FAILURE',response_status=?,next_attempt_at=?,last_error=?,updated_at=? WHERE event_key=? AND state='DELIVERING'").bind(response.status,new Date(Date.now()+60000).toISOString(),outcome.error,now(),e.event_key).run();
     } else {
-      await env.DB.prepare("UPDATE outbox SET state='REJECTED',response_status=?,last_error=?,updated_at=? WHERE event_key=? AND state='DELIVERING'").bind(response.status,"Discord definitively rejected delivery.",now(),e.event_key).run();
+      await env.DB.prepare("UPDATE outbox SET state='REJECTED',response_status=?,last_error=?,updated_at=? WHERE event_key=? AND state='DELIVERING'").bind(response.status,outcome.error,now(),e.event_key).run();
     }
   } catch(error) {
     await env.DB.prepare("UPDATE outbox SET state='UNKNOWN_DELIVERY',last_error=?,updated_at=? WHERE event_key=? AND state='DELIVERING'").bind("Delivery outcome is ambiguous after network/timeout failure; automatic resend is disabled.",now(),e.event_key).run();
   } finally { clearTimeout(timer); }
 }
+async function sendSetupTest(env) {
+  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) throw new Error("Telegram secrets are not configured.");
+  const existing=await env.DB.prepare("SELECT * FROM channel_evidence WHERE kind='SETUP_TEST'").first();
+  if(existing && existing.state!=="RETRYABLE_FAILURE") return {kind:existing.kind,state:existing.state,messageId:existing.message_id,alreadyAttempted:true};
+  const t=now();
+  if(!existing) await env.DB.prepare("INSERT INTO channel_evidence(kind,state,created_at,updated_at) VALUES('SETUP_TEST','DELIVERING',?,?)").bind(t,t).run();
+  else {
+    const claim=await env.DB.prepare("UPDATE channel_evidence SET state='DELIVERING',updated_at=? WHERE kind='SETUP_TEST' AND state='RETRYABLE_FAILURE'").bind(t).run();
+    if(!claim.meta.changes) return {kind:"SETUP_TEST",state:"NOT_CLAIMED"};
+  }
+  const text="PHAROS ON-CHAIN ALERT BOT — SETUP TEST\nChannel: owner-authorized private Telegram chat\nNetwork monitor: Pharos Pacific Mainnet (chain ID 1672)\nThis is a setup test only; it is not an on-chain event alert.";
+  const request=telegramRequest(env.TELEGRAM_BOT_TOKEN,env.TELEGRAM_CHAT_ID,text);
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+  try {
+    const response=await fetch(request.url,{...request.init,signal:controller.signal});
+    const body=await response.text(),outcome=classifyTelegramResponse(response.status,body);
+    if(outcome.kind==="DELIVERED"){
+      await env.DB.prepare("UPDATE channel_evidence SET state='DELIVERED',message_id=?,response_status=?,delivered_at=?,last_error=NULL,updated_at=? WHERE kind='SETUP_TEST' AND state='DELIVERING'").bind(outcome.messageId,response.status,now(),now()).run();
+      return {kind:"SETUP_TEST",state:"DELIVERED",messageId:outcome.messageId};
+    }
+    const state=outcome.kind==="RATE_LIMIT"?"RETRYABLE_FAILURE":outcome.kind;
+    await env.DB.prepare("UPDATE channel_evidence SET state=?,response_status=?,last_error=?,updated_at=? WHERE kind='SETUP_TEST' AND state='DELIVERING'").bind(state,response.status,outcome.error,now()).run();
+    return {kind:"SETUP_TEST",state,error:outcome.error};
+  } catch(error) {
+    await env.DB.prepare("UPDATE channel_evidence SET state='UNKNOWN_DELIVERY',last_error=?,updated_at=? WHERE kind='SETUP_TEST' AND state='DELIVERING'").bind("Setup delivery outcome is ambiguous after network/timeout failure; automatic resend is disabled.",now()).run();
+    return {kind:"SETUP_TEST",state:"UNKNOWN_DELIVERY"};
+  } finally {clearTimeout(timer);}
+}
 async function api(request, env, path) {
-  if(path==="/api/public/status") return json({engine:env.ENGINE_VERSION,chainId:CHAIN_ID,monitor:publicMonitor(await row(env)),channelConfigured:Boolean(env.DISCORD_WEBHOOK_URL)});
+  if(path==="/api/public/status"){ const channelEvidence=await env.DB.prepare("SELECT kind,state,message_id,response_status,last_error,delivered_at FROM channel_evidence ORDER BY updated_at DESC LIMIT 5").all(); return json({engine:env.ENGINE_VERSION,chainId:CHAIN_ID,channel:"TELEGRAM",monitor:publicMonitor(await row(env)),channelConfigured:Boolean(env.TELEGRAM_BOT_TOKEN&&env.TELEGRAM_CHAT_ID),channelEvidence:channelEvidence.results||[]}); }
   if(path==="/api/public/events") return json({events:await listEvidence(env)});
   if(!owner(request,env)) return json({error:"OWNER_AUTH_REQUIRED"},401);
   if(path==="/api/owner/configure"&&request.method==="POST") return json(await configure(request,env));
@@ -127,6 +153,7 @@ async function api(request, env, path) {
   if(path==="/api/owner/pause"&&request.method==="POST") return json(await setState(env,"PAUSED"));
   if(path==="/api/owner/resume"&&request.method==="POST") return json(await setState(env,"ACTIVE"));
   if(path==="/api/owner/run"&&request.method==="POST") return json(await detect(env,"OWNER_MANUAL"));
+  if(path==="/api/owner/test-channel"&&request.method==="POST") return json(await sendSetupTest(env));
   return json({error:"NOT_FOUND"},404);
 }
 export default {
@@ -138,3 +165,5 @@ export default {
   async scheduled(_controller,env,ctx){ ctx.waitUntil(detect(env,"CLOUDFLARE_CRON").catch(()=>{})); }
 };
 export { detect, deliverQueued };
+
+
