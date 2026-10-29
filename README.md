@@ -64,3 +64,15 @@ No wallet, private key, signature, approval, contract deployment, blockchain tra
 7. Repeat the same range and verify no second delivery; raise threshold and verify exclusion; reload and verify persistence.
 
 
+
+## Verified production demonstration
+
+- Setup test: Telegram HTTP 200, message ID 4.
+- Real-event historical backfill: 55.28 USDC at block 21620768, Telegram HTTP 200, message ID 5.
+- Stable event ID: 1672:0x2eb69b3f25841c4fa7c121b8393c197f224efd2b9726678797af09a20e2e507b:0.
+- Reprocessing produced zero new event/outbox rows; delivery remained one attempt and message ID 5.
+- A 55.280001 USDC threshold excluded the 55.28 USDC event.
+- Cloudflare Cron advanced the contiguous cursor after deployment/restart while D1 retained delivery state.
+- Explorer link resolved to the transaction-detail page with the transaction hash present.
+- Sanitized proof: evidence/v1-telegram-delivery.json.
+

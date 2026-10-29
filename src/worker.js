@@ -119,11 +119,11 @@ async function deliverOne(env, e) {
 async function sendSetupTest(env) {
   if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) throw new Error("Telegram secrets are not configured.");
   const existing=await env.DB.prepare("SELECT * FROM channel_evidence WHERE kind='SETUP_TEST'").first();
-  if(existing && existing.state!=="RETRYABLE_FAILURE") return {kind:existing.kind,state:existing.state,messageId:existing.message_id,alreadyAttempted:true};
+  if(existing && !["QUEUED","RETRYABLE_FAILURE"].includes(existing.state)) return {kind:existing.kind,state:existing.state,messageId:existing.message_id,alreadyAttempted:true};
   const t=now();
   if(!existing) await env.DB.prepare("INSERT INTO channel_evidence(kind,state,created_at,updated_at) VALUES('SETUP_TEST','DELIVERING',?,?)").bind(t,t).run();
   else {
-    const claim=await env.DB.prepare("UPDATE channel_evidence SET state='DELIVERING',updated_at=? WHERE kind='SETUP_TEST' AND state='RETRYABLE_FAILURE'").bind(t).run();
+    const claim=await env.DB.prepare("UPDATE channel_evidence SET state='DELIVERING',updated_at=? WHERE kind='SETUP_TEST' AND state IN ('QUEUED','RETRYABLE_FAILURE')").bind(t).run();
     if(!claim.meta.changes) return {kind:"SETUP_TEST",state:"NOT_CLAIMED"};
   }
   const text="PHAROS ON-CHAIN ALERT BOT — SETUP TEST\nChannel: owner-authorized private Telegram chat\nNetwork monitor: Pharos Pacific Mainnet (chain ID 1672)\nThis is a setup test only; it is not an on-chain event alert.";
@@ -156,14 +156,21 @@ async function api(request, env, path) {
   if(path==="/api/owner/test-channel"&&request.method==="POST") return json(await sendSetupTest(env));
   return json({error:"NOT_FOUND"},404);
 }
+export async function runScheduled(env) {
+  const setup=await env.DB.prepare("SELECT state FROM channel_evidence WHERE kind='SETUP_TEST'").first();
+  if(setup?.state==="QUEUED") await sendSetupTest(env);
+  await deliverQueued(env);
+  return detect(env,"CLOUDFLARE_CRON");
+}
 export default {
   async fetch(request,env){
     const url=new URL(request.url);
     try { return url.pathname.startsWith("/api/") ? await api(request,env,url.pathname) : env.ASSETS.fetch(request); }
     catch(error){ return json({error:String(error.message||error)},400); }
   },
-  async scheduled(_controller,env,ctx){ ctx.waitUntil(detect(env,"CLOUDFLARE_CRON").catch(()=>{})); }
+  async scheduled(_controller,env,ctx){ ctx.waitUntil(runScheduled(env).catch(()=>{})); }
 };
 export { detect, deliverQueued };
+
 
 

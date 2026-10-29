@@ -20,3 +20,14 @@ Real Telegram delivery requires the owner to authorize a private Telegram chat a
 Read-only blockchain access. No wallet, keys, signing, approvals, contracts, transactions, or spending.
 
 
+
+## Verified Telegram production demonstration
+
+- Setup test DELIVERED: message ID 4.
+- Real event backfill DELIVERED: message ID 5.
+- Deduplication verified after reprocessing: 1 event, 1 outbox row, 1 attempt, no second message.
+- Higher threshold exclusion verified.
+- Cron processed a contiguous 1,000-block range and advanced the cursor without an open browser.
+- Deployment/restart preserved D1 delivery state.
+- Explorer transaction page verified.
+- Remaining: publish GitHub repository and deploy new public evidence assets.

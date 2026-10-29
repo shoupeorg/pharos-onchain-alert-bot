@@ -1,7 +1,7 @@
 import { CHAIN_ID, TRANSFER_TOPIC, normalizeAddress } from "./core.js";
 
 export class RpcReader {
-  constructor(url, fetcher = fetch) { this.url = url; this.fetcher = fetcher; this.id = 0; }
+  constructor(url, fetcher) { this.url = url; this.fetcher = fetcher || ((...args) => globalThis.fetch(...args)); this.id = 0; }
   async call(method, params) {
     const response = await this.fetcher(this.url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: ++this.id, method, params }) });
     let json; try { json = await response.json(); } catch { throw new Error("RPC " + method + " returned non-JSON HTTP " + response.status + "."); }
@@ -41,3 +41,4 @@ export async function readMetadata(reader, token) {
   let symbol = "UNKNOWN"; try { symbol = decodeString(await reader.contractCall(token, "0x95d89b41")).slice(0, 32) || "UNKNOWN"; } catch {}
   return { token, decimals, symbol, codeVerified: true };
 }
+

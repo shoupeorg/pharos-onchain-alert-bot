@@ -8,16 +8,16 @@
       "status": "VERIFIED"
     },
     {
+      "path": "evidence/v1-telegram-delivery.json",
       "kind": "REAL_EXTERNAL_CHANNEL_DELIVERY",
-      "status": "BLOCKED_PENDING_OWNER_DESTINATION_AUTHORIZATION",
-      "reason": "Telegram was selected by the owner; bot token and private chat ID are pending secure server-side configuration."
+      "status": "VERIFIED",
+      "details": "One authorized setup test (message 4) and one authorized historical real-event alert (message 5) were delivered to the owner's private Telegram chat."
     }
   ],
   "completion": {
-    "configurableAlert": "IMPLEMENTED_NOT_DEPLOYED",
-    "realExternalDelivery": "NOT_YET_PERFORMED",
-    "completeAlertContent": "IMPLEMENTED_NOT_DELIVERED",
-    "deduplication": "IMPLEMENTED_AND_UNIT_TESTED"
+    "configurableAlert": "VERIFIED",
+    "realExternalDelivery": "VERIFIED",
+    "completeAlertContent": "VERIFIED",
+    "deduplication": "VERIFIED"
   }
 }
-

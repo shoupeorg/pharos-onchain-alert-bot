@@ -1,0 +1,75 @@
+{
+  "evidenceVersion": "v1-telegram-delivery",
+  "capturedAt": "2026-10-30T00:58:00+03:30",
+  "channel": {
+    "provider": "Telegram Bot API",
+    "destination": "OWNER_AUTHORIZED_PRIVATE_CHAT_REDACTED",
+    "secretsExposed": false
+  },
+  "setupTest": {
+    "authorization": "Owner authorized exactly one setup-test message.",
+    "state": "DELIVERED",
+    "httpStatus": 200,
+    "messageId": "4",
+    "deliveredAt": "2026-10-29T21:23:13.608Z",
+    "contentType": "SETUP_TEST_NOT_AN_ONCHAIN_ALERT"
+  },
+  "realEventBackfill": {
+    "authorization": "Owner authorized exactly one clearly labeled real-event backfill alert.",
+    "sourceEvidence": "evidence/v1-foundation-live-read.json",
+    "detectionMode": "HISTORICAL_BACKFILL",
+    "eventKey": "1672:0x2eb69b3f25841c4fa7c121b8393c197f224efd2b9726678797af09a20e2e507b:0",
+    "chainId": 1672,
+    "token": "0xc879c018db60520f4355c26ed1a6d572cdac1815",
+    "symbol": "USDC",
+    "decimals": 6,
+    "amountRaw": "55280000",
+    "amountDisplay": "55.28",
+    "sender": "0xbefe907df9b6500a400db58dd4451e3dcdd36a97",
+    "recipient": "0x768b959191ce5876cabbbc014a08d72615bdde54",
+    "blockNumber": 21620768,
+    "transactionHash": "0x2eb69b3f25841c4fa7c121b8393c197f224efd2b9726678797af09a20e2e507b",
+    "logIndex": 0,
+    "thresholdRaw": "55280000",
+    "state": "DELIVERED",
+    "httpStatus": 200,
+    "messageId": "5",
+    "deliveredAt": "2026-10-29T21:24:13.548Z"
+  },
+  "deduplication": {
+    "sameEventReinsertEventChanges": 0,
+    "sameEventReinsertOutboxChanges": 0,
+    "eventRows": 1,
+    "outboxRows": 1,
+    "deliveryAttempts": 1,
+    "messageIdAfterReprocessing": "5",
+    "stateAfterReprocessing": "DELIVERED",
+    "secondMessageSent": false
+  },
+  "higherThresholdExclusion": {
+    "eventAmountRaw": "55280000",
+    "configuredThresholdRaw": "55280001",
+    "excluded": true,
+    "additionalEventRows": 0,
+    "additionalMessages": 0
+  },
+  "serverScheduler": {
+    "browserRequired": false,
+    "trigger": "Cloudflare Cron */1 * * * *",
+    "processedRange": [21620768, 21621767],
+    "cursorAfterFirstSuccessfulRange": 21621768,
+    "lastSuccessfulCheck": "2026-10-29T21:27:16.230Z",
+    "restartPersistence": "After deployment version a39e98a5-a1c8-4465-bd99-3c2930804457, D1 retained DELIVERED state and message ID 5."
+  },
+  "explorerVerification": {
+    "requestedUrl": "https://pharos.socialscan.io/tx/0x2eb69b3f25841c4fa7c121b8393c197f224efd2b9726678797af09a20e2e507b",
+    "finalUrl": "https://www.pharosscan.xyz/tx/0x2eb69b3f25841c4fa7c121b8393c197f224efd2b9726678797af09a20e2e507b",
+    "httpStatus": 200,
+    "contentType": "text/html",
+    "title": "Pharos Transaction Hash (Txhash) Details | Pharos Network",
+    "transactionHashPresent": true,
+    "errorPageMarkersPresent": false
+  },
+  "deploymentVersion": "a39e98a5-a1c8-4465-bd99-3c2930804457",
+  "safety": "No blockchain transaction, wallet, key, signature, approval, contract deployment, or spending."
+}
