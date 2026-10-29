@@ -1,0 +1,15 @@
+{
+  "name": "pharos-onchain-alert-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "build": "esbuild src/worker.js --bundle --format=esm --platform=browser --target=es2022 --outfile=worker.js",
+    "deploy": "npm run build && wrangler deploy --no-bundle"
+  },
+  "devDependencies": {
+    "esbuild": "0.27.3",
+    "wrangler": "4.92.0"
+  }
+}

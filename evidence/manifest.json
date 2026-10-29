@@ -1,0 +1,22 @@
+{
+  "evidenceVersion": "v1",
+  "project": "pharos-onchain-alert-bot",
+  "items": [
+    {
+      "path": "evidence/v1-foundation-live-read.json",
+      "kind": "LIVE_READ_ONLY_FOUNDATION",
+      "status": "VERIFIED"
+    },
+    {
+      "kind": "REAL_EXTERNAL_CHANNEL_DELIVERY",
+      "status": "BLOCKED_PENDING_OWNER_DESTINATION_AUTHORIZATION",
+      "reason": "No existing authorized Telegram/Discord integration or webhook secret was found."
+    }
+  ],
+  "completion": {
+    "configurableAlert": "IMPLEMENTED_NOT_DEPLOYED",
+    "realExternalDelivery": "NOT_YET_PERFORMED",
+    "completeAlertContent": "IMPLEMENTED_NOT_DELIVERED",
+    "deduplication": "IMPLEMENTED_AND_UNIT_TESTED"
+  }
+}

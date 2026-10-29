@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pharos-onchain-alert-bot",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "triggers": { "crons": ["*/1 * * * *"] },
+  "vars": {
+    "CHAIN_ID": "1672",
+    "RPC_URL": "https://rpc.pharos.xyz",
+    "EXPLORER_TX_BASE": "https://pharos.socialscan.io/tx/",
+    "ENGINE_VERSION": "onchain-alert-bot/1.0.0"
+  },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "pharos-onchain-alert-bot",
+    "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+    "migrations_dir": "migrations"
+  }]
+}
+

@@ -1,0 +1,42 @@
+{
+  "evidenceVersion": "v1-foundation",
+  "capturedAt": "2026-10-30T00:00:00+03:30",
+  "source": "official Pharos Chain MCP",
+  "network": {
+    "name": "Pharos",
+    "chainId": 1672,
+    "chainIdHex": "0x688",
+    "chainIdMatches": true,
+    "rpcUrl": "https://rpc.pharos.xyz",
+    "observedLatestBlock": 21621444
+  },
+  "toolSchemas": {
+    "get_logs": {
+      "parameters": ["address", "fromBlock", "toBlock", "topics"],
+      "inclusiveRangeMaximum": 1000
+    },
+    "get_code": ["address", "block"],
+    "eth_call": ["transaction", "block"]
+  },
+  "defaultTokenVerification": {
+    "contract": "0xc879c018db60520f4355c26ed1a6d572cdac1815",
+    "bytecode": "NON_EMPTY",
+    "decimalsCallResult": "0x0000000000000000000000000000000000000000000000000000000000000006",
+    "decimals": 6,
+    "symbolCallResult": "0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000045553444300000000000000000000000000000000000000000000000000000000",
+    "symbol": "USDC"
+  },
+  "realTransferObservation": {
+    "queryRange": [21620759, 21621758],
+    "contract": "0xc879c018db60520f4355c26ed1a6d572cdac1815",
+    "blockNumber": 21620768,
+    "transactionHash": "0x2eb69b3f25841c4fa7c121b8393c197f224efd2b9726678797af09a20e2e507b",
+    "logIndex": 0,
+    "sender": "0xbefe907df9b6500a400db58dd4451e3dcdd36a97",
+    "recipient": "0x768b959191ce5876cabbbc014a08d72615bdde54",
+    "amountRaw": "55280000",
+    "amountDisplay": "55.28",
+    "removed": false
+  },
+  "safety": "Read-only calls only; no transaction was created or broadcast."
+}
